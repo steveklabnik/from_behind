@@ -15,18 +15,18 @@ instance Show Cell where
 	show Goal = "<"
 
 
-data World = MakeWorld [[Cell]] Int Int
+data World = MakeWorld [[Cell]] Int Int Player
 
 initWorld :: IO World
-initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] 0 0
+initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] 0 0 initPlayer
 
-initPlayer :: IO Player
-initPlayer = return $ Player "Someone" 10
+initPlayer :: Player
+initPlayer = Player "Someone" 10
 
 act :: World -> Key -> IO World
-act (MakeWorld board x y) i  
-    | board !! yi !! xi == Wall = return $ MakeWorld board x y
-    | otherwise = return $ MakeWorld board xi yi
+act (MakeWorld board x y p) i  
+    | board !! yi !! xi == Wall = return $ MakeWorld board x y p
+    | otherwise = return $ MakeWorld board xi yi p
     where
 	(xi, yi) = checkBounds board $ case i of
 		KeyChar 'h' -> (x-1, y)
@@ -41,7 +41,7 @@ checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((l
 
 
 drawWorld :: World -> IO ()
-drawWorld (MakeWorld board x y) = do
+drawWorld (MakeWorld board x y p) = do
 	wclear stdScr
 	move 0 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
@@ -53,16 +53,16 @@ drawWorld (MakeWorld board x y) = do
 	refresh
 
 hasWon :: World -> Bool
-hasWon (MakeWorld board x y) = board !! x !! y == Goal
+hasWon (MakeWorld board x y p) = board !! x !! y == Goal
 
-gameLoop :: Int -> World -> Player -> IO World
-gameLoop n w p 
+gameLoop :: Int -> World -> IO World
+gameLoop n w  
 	| hasWon w == True = return w
 	| otherwise = do 
 		i <- getCh
 		w' <- act w i
 		drawWorld w'
-		gameLoop (n + 1) w' p
+		gameLoop (n + 1) w' 
 
 main = do
 	initCurses
@@ -70,9 +70,8 @@ main = do
 	echo False
 	nl False
 	world <- initWorld
-	player <- initPlayer
 	drawWorld world
-	gameLoop 0 world player
+	gameLoop 0 world
 	endWin
 	putStr "Goodbye!"
 
