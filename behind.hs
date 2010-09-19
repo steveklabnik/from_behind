@@ -71,6 +71,7 @@ main = do
 	nl False
 	world <- initWorld
 	player <- initPlayer
+	drawWorld world
 	gameLoop 0 world player
 	endWin
 	putStr "Goodbye!"
