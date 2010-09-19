@@ -9,7 +9,7 @@ data Player = Player Name Health
 
 data Cell = Wall
 					| Empty
-					| Goal
+					| Goal deriving (Eq) 
 
 instance Show Cell where 
 	show Wall = "#"
@@ -26,12 +26,17 @@ initPlayer :: IO Player
 initPlayer = return $ Player "Someone" 10
 
 act :: World -> Key -> IO World
-act (MakeWorld board x y) i = case i of
-	KeyChar 'h' -> return $ MakeWorld board (lowerBound (x - 1)) y 
-	KeyChar 'j' -> return $ MakeWorld board x (upperBound (y + 1))
-	KeyChar 'k' -> return $ MakeWorld board x (lowerBound (y - 1))
-	KeyChar 'l' -> return $ MakeWorld board (upperBound (x + 1)) y 
-	otherwise -> return $ MakeWorld board x y
+act (MakeWorld board x y) i  
+    | board !! yi !! xi == Wall = return $ MakeWorld board x y
+    | otherwise = return $ MakeWorld board xi yi
+    where
+	(xi, yi) =  	case i of
+		KeyChar 'h' -> (lowerBound (x - 1), y)
+		KeyChar 'j' -> (x, upperBound (y + 1))
+		KeyChar 'k' -> (x, lowerBound (y - 1))
+		KeyChar 'l' -> (upperBound (x + 1), y)
+		otherwise -> (x, y)
+
 
 lowerBound :: Int -> Int
 lowerBound n = max n 0
@@ -52,11 +57,11 @@ drawWorld (MakeWorld board x y) = do
 	refresh
 
 hasWon :: World -> Bool
-hasWon w = True
+hasWon (MakeWorld board x y) = board !! x !! y == Goal
 
 gameLoop :: Int -> World -> Player -> IO World
 gameLoop n w p 
-	| hasWon w == (n == 10) = return w
+	| hasWon w == True = return w
 	| otherwise = do 
 		i <- getCh
 		w' <- act w i
