@@ -1,4 +1,6 @@
 import UI.HSCurses.Curses
+import System.Random
+import Control.Monad.State
 
 type Health = Int
 type Name = String
@@ -32,8 +34,27 @@ instance Show Cell where
 
 data World = MakeWorld [[Cell]] Player
 
-initWorld :: IO World
-initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] initPlayer
+initWorld :: StdGen -> IO World
+initWorld gen = do
+	width <- return $ fst $ makeRandomValueST (4,15) (snd (next gen))
+	height <- return $ fst $ makeRandomValueST (4,15) (snd (next gen))
+	return $ MakeWorld (map (\_ -> map (genCell) [0,1 .. width]) [0,1 .. height]) initPlayer
+	where
+		genCell :: Int -> Cell
+		genCell _ = case (fst (makeRandomValueST (1,4) gen)) :: Int of
+			1 -> Wall
+			otherwise -> Empty
+
+makeRandomValueST :: (Int, Int) -> StdGen -> (Int, StdGen)
+makeRandomValueST (x,y) = runState (getOne (x,y)) where
+	getOne :: (Random a) => (a,a) -> State StdGen a
+	getOne bounds = do 
+		g      <- get
+		(x,g') <- return $ randomR bounds g
+		put g'
+		return x
+
+
 
 initPlayer :: Player
 initPlayer = Player "Someone" 10 (0,0)
@@ -85,7 +106,8 @@ main = do
 	cBreak True
 	echo False
 	nl False
-	world <- initWorld
+	gen <- getStdGen
+	world <- initWorld gen
 	drawWorld world
 	gameLoop 0 world
 	endWin
