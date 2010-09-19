@@ -1,3 +1,2 @@
 main:
-	ghc -o behind behind.hs
-	./behind
+	runhaskell behind.hs
