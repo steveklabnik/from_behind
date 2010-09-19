@@ -1,5 +1,6 @@
 import UI.HSCurses.Curses
 import System.IO
+import Text.Printf
 
 type Health = Int
 type Name = String
@@ -27,8 +28,8 @@ initPlayer = return $ Player "Someone" 10
 act :: World -> Key -> IO World
 act (MakeWorld board x y) i = case i of
 	KeyChar 'h' -> return $ MakeWorld board (lowerBound (x - 1)) y 
-	KeyChar 'j' -> return $ MakeWorld board x (lowerBound (y - 1))
-	KeyChar 'k' -> return $ MakeWorld board x (upperBound (y + 1))
+	KeyChar 'j' -> return $ MakeWorld board x (upperBound (y + 1))
+	KeyChar 'k' -> return $ MakeWorld board x (lowerBound (y - 1))
 	KeyChar 'l' -> return $ MakeWorld board (upperBound (x + 1)) y 
 	otherwise -> return $ MakeWorld board x y
 
@@ -41,22 +42,14 @@ upperBound n = min n 1
 drawWorld :: World -> IO ()
 drawWorld (MakeWorld board x y) = do
 	wclear stdScr
-	wMove stdScr 0 0
-	--foldl (\ys -> foldl (\c -> myshow (return ()) c) ys) (return ()) board
-	board' <- return $ map (\ys -> map (show) ys) board
-	board'' <- return $ foldr (++) "" $ foldr (\a b -> a ++ ["\r\n"] ++ b) [] board'
-	putStr board''
-	putStr $ "x: " ++ show x ++ " y: " ++ show y
-
-myshow :: IO a -> Cell -> IO ()
-myshow boo c = putStr $ show c
-
-drawSpace :: [[Cell]] -> Int -> Int -> IO ()
-drawSpace board x y = do
+	move 0 0
+	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
+	wAddStr stdScr board'
 	wMove stdScr y x
-	putStr $ show $ board !! x !! y
-	
-
+	wAddStr stdScr "@"
+	move 15 0
+	wAddStr stdScr $ "x: " ++ show x ++ " y: " ++ show y
+	refresh
 
 hasWon :: World -> Bool
 hasWon w = True
