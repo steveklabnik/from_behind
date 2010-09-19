@@ -3,7 +3,22 @@ import UI.HSCurses.Curses
 type Health = Int
 type Name = String
 
-data Player = Player Name Health
+data Player = Player Name Health (Int, Int)
+
+getPlayerX :: Player -> Int
+getPlayerX (Player _ _ (x,_)) = x
+
+getPlayerY :: Player -> Int
+getPlayerY (Player _ _ (_,y)) = y
+
+setPlayerXY :: Player -> Int -> Int -> Player 
+setPlayerXY p x y = setPlayerX (setPlayerY p y) x
+
+setPlayerX :: Player -> Int -> Player
+setPlayerX (Player n h (_,y)) x = Player n h (x,y)
+
+setPlayerY :: Player -> Int -> Player
+setPlayerY (Player n h (x,_)) y = Player n h (x,y)
 
 data Cell = Wall
 					| Empty
@@ -15,19 +30,21 @@ instance Show Cell where
 	show Goal = "<"
 
 
-data World = MakeWorld [[Cell]] Int Int Player
+data World = MakeWorld [[Cell]] Player
 
 initWorld :: IO World
-initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] 0 0 initPlayer
+initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] initPlayer
 
 initPlayer :: Player
-initPlayer = Player "Someone" 10
+initPlayer = Player "Someone" 10 (0,0)
 
 act :: World -> Key -> IO World
-act (MakeWorld board x y p) i  
-    | board !! yi !! xi == Wall = return $ MakeWorld board x y p
-    | otherwise = return $ MakeWorld board xi yi p
+act (MakeWorld board p) i  
+    | board !! yi !! xi == Wall = return $ MakeWorld board p
+    | otherwise = return $ MakeWorld board (setPlayerXY p xi yi)
     where
+	x = getPlayerX p
+	y = getPlayerY p
 	(xi, yi) = checkBounds board $ case i of
 		KeyChar 'h' -> (x-1, y)
 		KeyChar 'j' -> (x, y+1)
@@ -35,13 +52,12 @@ act (MakeWorld board x y p) i
 		KeyChar 'l' -> (x+1, y)
 		otherwise -> (x, y)
 
-
 checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
 checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
 
 
 drawWorld :: World -> IO ()
-drawWorld (MakeWorld board x y p) = do
+drawWorld (MakeWorld board (Player _ _ (x,y))) = do
 	wclear stdScr
 	move 0 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
@@ -53,7 +69,7 @@ drawWorld (MakeWorld board x y p) = do
 	refresh
 
 hasWon :: World -> Bool
-hasWon (MakeWorld board x y p) = board !! x !! y == Goal
+hasWon (MakeWorld board (Player _ _ (x,y))) = board !! x !! y == Goal
 
 gameLoop :: Int -> World -> IO World
 gameLoop n w  
