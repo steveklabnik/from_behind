@@ -1,6 +1,4 @@
 import UI.HSCurses.Curses
-import System.IO
-import Text.Printf
 
 type Health = Int
 type Name = String
@@ -67,7 +65,6 @@ gameLoop n w p
 		gameLoop (n + 1) w' p
 
 main = do
-	hSetBuffering stdout NoBuffering
 	initCurses
 	cBreak True
 	echo False
