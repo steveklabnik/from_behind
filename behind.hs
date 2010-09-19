@@ -30,19 +30,17 @@ act (MakeWorld board x y) i
     | board !! yi !! xi == Wall = return $ MakeWorld board x y
     | otherwise = return $ MakeWorld board xi yi
     where
-	(xi, yi) =  	case i of
-		KeyChar 'h' -> (lowerBound (x - 1), y)
-		KeyChar 'j' -> (x, upperBound (y + 1))
-		KeyChar 'k' -> (x, lowerBound (y - 1))
-		KeyChar 'l' -> (upperBound (x + 1), y)
+	(xi, yi) = checkBounds $ case i of
+		KeyChar 'h' -> (x-1, y)
+		KeyChar 'j' -> (x, y+1)
+		KeyChar 'k' -> (x, y-1)
+		KeyChar 'l' -> (x+1, y)
 		otherwise -> (x, y)
 
 
-lowerBound :: Int -> Int
-lowerBound n = max n 0
+checkBounds :: (Int, Int) -> (Int, Int)
+checkBounds (x, y) = (min (max x 0) 1, min (max y 0) 1)
 
-upperBound :: Int -> Int
-upperBound n = min n 1
 
 drawWorld :: World -> IO ()
 drawWorld (MakeWorld board x y) = do
