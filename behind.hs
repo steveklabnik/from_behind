@@ -89,5 +89,5 @@ main = do
 	drawWorld world
 	gameLoop 0 world
 	endWin
-	putStr "Goodbye!"
+	putStrLn "Goodbye!"
 
