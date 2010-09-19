@@ -20,7 +20,7 @@ instance Show Cell where
 data World = MakeWorld [[Cell]] Int Int
 
 initWorld :: IO World
-initWorld = return $ MakeWorld [[Empty, Wall], [Empty, Goal]] 0 0
+initWorld = return $ MakeWorld [[Empty, Empty, Empty], [Empty, Goal, Empty], [Empty, Wall, Empty]] 0 0
 
 initPlayer :: IO Player
 initPlayer = return $ Player "Someone" 10
@@ -30,7 +30,7 @@ act (MakeWorld board x y) i
     | board !! yi !! xi == Wall = return $ MakeWorld board x y
     | otherwise = return $ MakeWorld board xi yi
     where
-	(xi, yi) = checkBounds $ case i of
+	(xi, yi) = checkBounds board $ case i of
 		KeyChar 'h' -> (x-1, y)
 		KeyChar 'j' -> (x, y+1)
 		KeyChar 'k' -> (x, y-1)
@@ -38,8 +38,8 @@ act (MakeWorld board x y) i
 		otherwise -> (x, y)
 
 
-checkBounds :: (Int, Int) -> (Int, Int)
-checkBounds (x, y) = (min (max x 0) 1, min (max y 0) 1)
+checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
+checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
 
 
 drawWorld :: World -> IO ()
