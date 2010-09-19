@@ -1,2 +1,2 @@
 main:
-	runhaskell behind.hs
+	ghc -o behind -package hscurses behind.hs

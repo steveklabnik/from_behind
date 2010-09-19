@@ -1,3 +1,4 @@
 *.hi
 behind
 *.o
+*.swp
