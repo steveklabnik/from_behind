@@ -23,8 +23,8 @@ setPlayerY :: Player -> Int -> Player
 setPlayerY (Player n h (x,_)) y = Player n h (x,y)
 
 data Cell = Wall
-					| Empty
-					| Goal deriving (Eq) 
+          | Empty
+          | Goal deriving (Eq) 
 
 instance Show Cell where 
 	show Wall = "#"
@@ -36,26 +36,29 @@ data World = MakeWorld [[Cell]] Player
 
 initWorld :: StdGen -> IO World
 initWorld gen = do
-	(width, gen) <- randomNum gen
-	(height, gen) <- randomNum gen
-	return $ MakeWorld (map (\_ -> map (genCell) [0,1 .. width]) [0,1 .. height]) initPlayer
-	where
-		genCell :: Int -> Cell
-		genCell _ = Wall
-
+	(width, gen) <- randomNum 3 75 gen
+	(height, gen') <- randomNum 3 23 gen
+	cells <- return $ map (genCell) (randoms gen :: [Int])
+	return $ MakeWorld (map (\i -> take width (drop (i * width) cells)) [0,1 .. height]) initPlayer
+		where
+			genCell :: Int -> Cell
+			genCell n = case x of
+					0 -> Wall
+					3 -> Goal
+					otherwise -> Empty
+					where x = mod n 4
+						
 type GeneratorState = State StdGen
 
-randomGen :: GeneratorState Int
-randomGen = do 
+randomGen :: Int -> Int -> GeneratorState Int
+randomGen min max = do 
 	generator <- get
-	let( value, newGenerator ) = randomR (1,6) generator
+	let( value, newGenerator ) = randomR (min,max) generator
 	put newGenerator
 	return value
 
-randomNum :: StdGen -> IO (Int, StdGen)
-randomNum gen = return $ runState randomGen gen
-
-
+randomNum :: Int -> Int -> StdGen -> IO (Int, StdGen)
+randomNum min max gen = return $ runState (randomGen min max) gen
 
 
 initPlayer :: Player
