@@ -37,17 +37,31 @@ data World = MakeWorld [[Cell]] Player
 initWorld :: StdGen -> IO World
 initWorld gen = do
 	(width, gen) <- randomNum 3 75 gen
-	(height, gen') <- randomNum 3 23 gen
+	(height, gen) <- randomNum 3 23 gen
+	(goalX, gen) <- randomNum 2 width gen
+	(goalY, gen) <- randomNum 2 height gen
 	cells <- return $ map (genCell) (randoms gen :: [Int])
-	return $ MakeWorld (map (\i -> take width (drop (i * width) cells)) [0,1 .. height]) initPlayer
+	board <- return $ (map (\i -> take width (drop (i * width) cells)) [0,1 .. height])
+	board <- return $ addGoal goalX goalY board 
+	return $ MakeWorld board initPlayer
 		where
 			genCell :: Int -> Cell
 			genCell n = case x of
 					0 -> Wall
-					3 -> Goal
 					otherwise -> Empty
 					where x = mod n 4
-						
+
+addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
+addGoal x y (b:board)  
+	| y == 1 = (addGoal' x b) : board
+	| otherwise = b : addGoal x (y-1) board 
+
+addGoal' :: Int -> [Cell] -> [Cell]
+addGoal' x (r:row) 
+	| x == 1 = Goal : row
+	|	otherwise = r : addGoal' (x-1) row
+					
+
 type GeneratorState = State StdGen
 
 randomGen :: Int -> Int -> GeneratorState Int
