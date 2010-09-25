@@ -90,6 +90,10 @@ act (MakeWorld board p) i
 		KeyChar 'j' -> (x, y+1)
 		KeyChar 'k' -> (x, y-1)
 		KeyChar 'l' -> (x+1, y)
+		KeyChar 'y' -> (x-1, y-1)
+		KeyChar 'u' -> (x+1, y-1)
+		KeyChar 'b' -> (x-1, y+1)
+		KeyChar 'n' -> (x+1, y+1)
 		otherwise -> (x, y)
 
 checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
@@ -100,7 +104,7 @@ drawWorld :: World -> IO ()
 drawWorld (MakeWorld board (Player name hp (x,y))) = do
 	wclear stdScr
 	move 0 0
-	wAddStr stdScr $ "HP: " ++ (show hp)
+	wAddStr stdScr $ name ++ " HP: " ++ (show hp)
 	move 1 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
 	wAddStr stdScr board'
