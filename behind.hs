@@ -36,23 +36,25 @@ data World = MakeWorld [[Cell]] Player
 
 initWorld :: StdGen -> IO World
 initWorld gen = do
-	width <- return $ fst $ makeRandomValueST (4,15) (snd (next gen))
-	height <- return $ fst $ makeRandomValueST (4,15) (snd (next gen))
+	(width, gen) <- randomNum gen
+	(height, gen) <- randomNum gen
 	return $ MakeWorld (map (\_ -> map (genCell) [0,1 .. width]) [0,1 .. height]) initPlayer
 	where
 		genCell :: Int -> Cell
-		genCell _ = case (fst (makeRandomValueST (1,4) gen)) :: Int of
-			1 -> Wall
-			otherwise -> Empty
+		genCell _ = Wall
 
-makeRandomValueST :: (Int, Int) -> StdGen -> (Int, StdGen)
-makeRandomValueST (x,y) = runState (getOne (x,y)) where
-	getOne :: (Random a) => (a,a) -> State StdGen a
-	getOne bounds = do 
-		g      <- get
-		(x,g') <- return $ randomR bounds g
-		put g'
-		return x
+type GeneratorState = State StdGen
+
+randomGen :: GeneratorState Int
+randomGen = do 
+	generator <- get
+	let( value, newGenerator ) = randomR (1,6) generator
+	put newGenerator
+	return value
+
+randomNum :: StdGen -> IO (Int, StdGen)
+randomNum gen = return $ runState randomGen gen
+
 
 
 
