@@ -123,6 +123,7 @@ gameLoop n w
 main = do
 	initCurses
 	cBreak True
+	cursSet CursorInvisible
 	echo False
 	nl False
 	gen <- getStdGen
