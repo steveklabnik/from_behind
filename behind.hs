@@ -97,12 +97,14 @@ checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((l
 
 
 drawWorld :: World -> IO ()
-drawWorld (MakeWorld board (Player _ _ (x,y))) = do
+drawWorld (MakeWorld board (Player name hp (x,y))) = do
 	wclear stdScr
 	move 0 0
+	wAddStr stdScr $ "HP: " ++ (show hp)
+	move 1 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
 	wAddStr stdScr board'
-	wMove stdScr y x
+	wMove stdScr (y+1) x
 	wAddStr stdScr "@"
 	refresh
 
