@@ -55,12 +55,12 @@ addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
 addGoal x y (b:board)  
 	| y == 1 = (addGoal' x b) : board
 	| otherwise = b : addGoal x (y-1) board 
-
-addGoal' :: Int -> [Cell] -> [Cell]
-addGoal' x (r:row) 
-	| x == 1 = Goal : row
-	|	otherwise = r : addGoal' (x-1) row
-					
+	where
+		addGoal' :: Int -> [Cell] -> [Cell]
+		addGoal' x (r:row) 
+			| x == 1 = Goal : row
+			|	otherwise = r : addGoal' (x-1) row
+							
 
 type GeneratorState = State StdGen
 
@@ -104,8 +104,6 @@ drawWorld (MakeWorld board (Player _ _ (x,y))) = do
 	wAddStr stdScr board'
 	wMove stdScr y x
 	wAddStr stdScr "@"
-	move 15 0
-	wAddStr stdScr $ "x: " ++ show x ++ " y: " ++ show y
 	refresh
 
 hasWon :: World -> Bool
