@@ -1,6 +1,7 @@
 import UI.HSCurses.Curses
 import System.Random
 import Control.Monad.State
+import List
 
 type Health = Int
 type Name = String
@@ -22,9 +23,15 @@ setPlayerX (Player n h (_,y)) x = Player n h (x,y)
 setPlayerY :: Player -> Int -> Player
 setPlayerY (Player n h (x,_)) y = Player n h (x,y)
 
+modifyPlayerHP :: Player -> Int -> Player
+modifyPlayerHP (Player n h pos) num = Player n (h+num) pos  
+
 data Cell = Wall
           | Empty
           | Goal deriving (Eq) 
+
+data Item = Potion Int (Int, Int)
+					| Weapon Name Int (Int, Int) deriving (Eq)
 
 instance Show Cell where 
 	show Wall = "#"
@@ -32,7 +39,8 @@ instance Show Cell where
 	show Goal = "<"
 
 
-data World = MakeWorld [[Cell]] Player
+data World = MakeWorld [[Cell]] [Item] Player
+ 
 
 initWorld :: StdGen -> IO World
 initWorld gen = do
@@ -43,7 +51,7 @@ initWorld gen = do
 	cells <- return $ map (genCell) (randoms gen :: [Int])
 	board <- return $ (map (\i -> take width (drop (i * width) cells)) [0,1 .. height])
 	board <- return $ addGoal goalX goalY board 
-	return $ MakeWorld board initPlayer
+	return $ MakeWorld board initItems initPlayer
 		where
 			genCell :: Int -> Cell
 			genCell n = case x of
@@ -60,7 +68,9 @@ addGoal x y (b:board)
 		addGoal' x (r:row) 
 			| x == 1 = Goal : row
 			|	otherwise = r : addGoal' (x-1) row
-							
+
+initItems :: [Item]
+initItems = [Potion 5 (5,5)]
 
 type GeneratorState = State StdGen
 
@@ -79,12 +89,14 @@ initPlayer :: Player
 initPlayer = Player "Someone" 10 (0,0)
 
 act :: World -> Key -> IO World
-act (MakeWorld board p) i  
-    | board !! yi !! xi == Wall = return $ MakeWorld board p
-    | otherwise = return $ MakeWorld board (setPlayerXY p xi yi)
+act (MakeWorld board items p) i  
+    | board !! yi !! xi == Wall = return $ MakeWorld board items p
+		| itemList /= [] = return $ MakeWorld board (items \\ itemList) (setPlayerXY (modifyPlayerHP p 5) xi yi)  
+    | otherwise = return $ MakeWorld board items (setPlayerXY p xi yi)
     where
 	x = getPlayerX p
 	y = getPlayerY p
+	itemList = filter (checkItem (xi,yi)) items
 	(xi, yi) = checkBounds board $ case i of
 		KeyChar 'h' -> (x-1, y)
 		KeyChar 'j' -> (x, y+1)
@@ -99,21 +111,34 @@ act (MakeWorld board p) i
 checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
 checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
 
+checkItem :: (Int, Int) -> Item -> Bool
+checkItem (playerX, playerY) (Potion hp (x,y))
+	| (x == playerX) && (y == playerY) = True
+	| otherwise = False 
 
 drawWorld :: World -> IO ()
-drawWorld (MakeWorld board (Player name hp (x,y))) = do
+drawWorld (MakeWorld board items (Player name hp (x,y))) = do
 	wclear stdScr
 	move 0 0
 	wAddStr stdScr $ name ++ " HP: " ++ (show hp)
 	move 1 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
 	wAddStr stdScr board'
+	if items /= [] 
+		then head $ map (drawItem) items
+		else return ()
 	wMove stdScr (y+1) x
 	wAddStr stdScr "@"
 	refresh
 
+drawItem :: Item -> IO ()
+drawItem (Potion _ (x,y)) = do
+	move (y+1) x
+	wAddStr stdScr "!"
+	
+
 hasWon :: World -> Bool
-hasWon (MakeWorld board (Player _ _ (x,y))) = board !! y !! x == Goal
+hasWon (MakeWorld board _ (Player _ _ (x,y))) = board !! y !! x == Goal
 
 gameLoop :: Int -> World -> IO World
 gameLoop n w  
