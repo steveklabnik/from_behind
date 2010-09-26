@@ -5,17 +5,30 @@ import List
 
 type Health = Int
 type Name = String
+type Pos = (Int, Int)
 
 data Player = Player { playerName::String, 
 											 playerHP::Int,
-											 playerPos::(Int, Int) }
+											 playerPos::Pos }
 
 data Cell = Wall
           | Empty
           | Goal deriving (Eq) 
 
 data Item = Item { itemName::String,
-									 itemPos::(Int, Int) } deriving (Eq)
+									 itemPos::Pos,
+									 itemFunc::(Player -> Player)
+								 }
+
+instance Eq Item where 
+	(==) a b = itemName a == itemName b
+
+potion :: Pos -> Int -> Item
+potion pos hp = Item { itemName = "Potion",
+											 itemPos = pos,
+											 itemFunc = f}
+											where
+												f p = p { playerHP = ((playerHP p) + hp) }
 
 instance Show Cell where 
 	show Wall = "#"
@@ -47,7 +60,7 @@ initWorld gen = do
 			initPlayer :: Player
 			initPlayer = Player "Someone" 10 (0,0)
 			initItems :: [Item]
-			initItems = [Item "Potion" (5,5)]
+			initItems = [potion (5,5) 5]
 			addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
 			addGoal x y (b:board)  
 				| y == 1 = (addGoal' x b) : board
@@ -75,7 +88,7 @@ randomNum min max gen = return $ runState (randomGen min max) gen
 act :: World -> Key -> IO World
 act (World board items p) i  
     | board !! yi !! xi == Wall = return $ World board items p
-		| itemList /= [] = return $ World board (items \\ itemList)  (p {playerHP = ((playerHP p) + 5), playerPos = (xi, yi)})
+		| itemList /= [] = return $ World board (items \\ itemList)  (useItems (p {playerPos = (xi, yi)}))
     | otherwise = return $ World board items (p { playerPos = (xi, yi)} )
     where
 	x = fst $ playerPos p
@@ -94,9 +107,11 @@ act (World board items p) i
 	checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
 	checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
 	checkItem :: (Int, Int) -> Item -> Bool
-	checkItem (playerX, playerY) (Item "Potion" (x,y))
+	checkItem (playerX, playerY) (Item name (x,y) _)
 		| (x == playerX) && (y == playerY) = True
 		| otherwise = False 
+	useItems :: Player -> Player
+	useItems p = foldl (flip itemFunc) p itemList
 
 drawWorld :: World -> IO ()
 drawWorld (World board items (Player name hp (x,y))) = do
@@ -114,7 +129,7 @@ drawWorld (World board items (Player name hp (x,y))) = do
 	refresh
 	where
 		drawItem :: Item -> IO ()
-		drawItem (Item name (x,y)) = do
+		drawItem (Item name (x,y) _) = do
 			move (y+1) x
 			wAddStr stdScr "!"
 
@@ -138,7 +153,8 @@ main = do
 	cursSet CursorInvisible
 	echo False
 	nl False
-	world <- initWorld getStdGen
+	gen <- getStdGen
+	world <- initWorld gen
 	drawWorld world
 	gameLoop 0 world
 	endWin
