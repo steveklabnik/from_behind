@@ -44,19 +44,20 @@ initWorld gen = do
 					0 -> Wall
 					otherwise -> Empty
 					where x = mod n 4
+			initPlayer :: Player
+			initPlayer = Player "Someone" 10 (0,0)
+			initItems :: [Item]
+			initItems = [Item "Potion" (5,5)]
+			addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
+			addGoal x y (b:board)  
+				| y == 1 = (addGoal' x b) : board
+				| otherwise = b : addGoal x (y-1) board 
+				where
+					addGoal' :: Int -> [Cell] -> [Cell]
+					addGoal' x (r:row) 
+						| x == 1 = Goal : row
+						|	otherwise = r : addGoal' (x-1) row
 
-addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
-addGoal x y (b:board)  
-	| y == 1 = (addGoal' x b) : board
-	| otherwise = b : addGoal x (y-1) board 
-	where
-		addGoal' :: Int -> [Cell] -> [Cell]
-		addGoal' x (r:row) 
-			| x == 1 = Goal : row
-			|	otherwise = r : addGoal' (x-1) row
-
-initItems :: [Item]
-initItems = [Item "Potion" (5,5)]
 
 type GeneratorState = State StdGen
 
@@ -70,9 +71,6 @@ randomGen min max = do
 randomNum :: Int -> Int -> StdGen -> IO (Int, StdGen)
 randomNum min max gen = return $ runState (randomGen min max) gen
 
-
-initPlayer :: Player
-initPlayer = Player "Someone" 10 (0,0)
 
 act :: World -> Key -> IO World
 act (World board items p) i  
@@ -93,14 +91,12 @@ act (World board items p) i
 		KeyChar 'b' -> (x-1, y+1)
 		KeyChar 'n' -> (x+1, y+1)
 		otherwise -> (x, y)
-
-checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
-checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
-
-checkItem :: (Int, Int) -> Item -> Bool
-checkItem (playerX, playerY) (Item "Potion" (x,y))
-	| (x == playerX) && (y == playerY) = True
-	| otherwise = False 
+	checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
+	checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
+	checkItem :: (Int, Int) -> Item -> Bool
+	checkItem (playerX, playerY) (Item "Potion" (x,y))
+		| (x == playerX) && (y == playerY) = True
+		| otherwise = False 
 
 drawWorld :: World -> IO ()
 drawWorld (World board items (Player name hp (x,y))) = do
@@ -116,33 +112,33 @@ drawWorld (World board items (Player name hp (x,y))) = do
 	wMove stdScr (y+1) x
 	wAddStr stdScr "@"
 	refresh
-
-drawItem :: Item -> IO ()
-drawItem (Item name (x,y)) = do
-	move (y+1) x
-	wAddStr stdScr "!"
-	
-
-hasWon :: World -> Bool
-hasWon (World board _ (Player _ _ (x,y))) = board !! y !! x == Goal
+	where
+		drawItem :: Item -> IO ()
+		drawItem (Item name (x,y)) = do
+			move (y+1) x
+			wAddStr stdScr "!"
 
 gameLoop :: Int -> World -> IO World
 gameLoop n w  
 	| hasWon w == True = return w
 	| otherwise = do 
+		-- grab a key, do something with it
 		i <- getCh
 		w' <- act w i
 		drawWorld w'
 		gameLoop (n + 1) w' 
+		where
+			hasWon :: World -> Bool
+			hasWon (World board _ (Player _ _ (x,y))) = board !! y !! x == Goal
 
 main = do
+	--tons of curses stuff
 	initCurses
 	cBreak True
 	cursSet CursorInvisible
 	echo False
 	nl False
-	gen <- getStdGen
-	world <- initWorld gen
+	world <- initWorld getStdGen
 	drawWorld world
 	gameLoop 0 world
 	endWin
