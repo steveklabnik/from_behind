@@ -21,7 +21,7 @@ data Item = Item { itemName::String,
 								 }
 
 instance Eq Item where 
-	(==) a b = itemName a == itemName b
+	(==) a b = (itemName a == itemName b) && (itemPos a == itemPos b)
 
 potion :: Pos -> Int -> Item
 potion pos hp = Item { itemName = "Potion",
@@ -47,11 +47,16 @@ initWorld gen = do
 	(height, gen) <- randomNum 3 23 gen
 	(goalX, gen) <- randomNum 2 width gen
 	(goalY, gen) <- randomNum 2 height gen
+	items <- return $ genItems (width, height) 5 (randoms gen :: [Int])
 	cells <- return $ map (genCell) (randoms gen :: [Int])
 	board <- return $ (map (\i -> take width (drop (i * width) cells)) [0,1 .. height])
 	board <- return $ addGoal goalX goalY board 
-	return $ World board initItems initPlayer
+	return $ World board items initPlayer
 		where
+			genItems :: (Int, Int) -> Int -> [Int] -> [Item]
+			genItems (width, height) count (x:y:z:xs)
+				| count == 0 = []
+				| otherwise = (potion ((mod x width), (mod y height)) (mod z 10)) : (genItems (width, height) (count - 1) xs)
 			genCell :: Int -> Cell
 			genCell n = case x of
 					0 -> Wall
@@ -59,8 +64,6 @@ initWorld gen = do
 					where x = mod n 4
 			initPlayer :: Player
 			initPlayer = Player "Someone" 10 (0,0)
-			initItems :: [Item]
-			initItems = [potion (5,5) 5]
 			addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
 			addGoal x y (b:board)  
 				| y == 1 = (addGoal' x b) : board
@@ -88,7 +91,7 @@ randomNum min max gen = return $ runState (randomGen min max) gen
 act :: World -> Key -> IO World
 act (World board items p) i  
     | board !! yi !! xi == Wall = return $ World board items p
-		| itemList /= [] = return $ World board (items \\ itemList)  (useItems (p {playerPos = (xi, yi)}))
+		| itemList /= [] = return $ World board (items \\ itemList) (useItems (p {playerPos = (xi, yi)}))
     | otherwise = return $ World board items (p { playerPos = (xi, yi)} )
     where
 	x = fst $ playerPos p
@@ -104,14 +107,14 @@ act (World board items p) i
 		KeyChar 'b' -> (x-1, y+1)
 		KeyChar 'n' -> (x+1, y+1)
 		otherwise -> (x, y)
+	useItems :: Player -> Player
+	useItems p = foldl (flip itemFunc) p itemList
 	checkBounds :: [[Cell]] -> (Int, Int) -> (Int, Int)
 	checkBounds b (x, y) = (min (max x 0) ((length (b !! 0)) - 1), min (max y 0) ((length b) - 1))
 	checkItem :: (Int, Int) -> Item -> Bool
 	checkItem (playerX, playerY) (Item name (x,y) _)
 		| (x == playerX) && (y == playerY) = True
 		| otherwise = False 
-	useItems :: Player -> Player
-	useItems p = foldl (flip itemFunc) p itemList
 
 drawWorld :: World -> IO ()
 drawWorld (World board items (Player name hp (x,y))) = do
@@ -121,13 +124,16 @@ drawWorld (World board items (Player name hp (x,y))) = do
 	move 1 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
 	wAddStr stdScr board'
-	if items /= [] 
-		then head $ map (drawItem) items
-		else return ()
-	wMove stdScr (y+1) x
+	drawItems items
+	move (y+1) x
 	wAddStr stdScr "@"
 	refresh
 	where
+		drawItems :: [Item] -> IO ()
+		drawItems [] = return ()
+		drawItems (x:xs) = do
+			drawItem x
+			drawItems xs
 		drawItem :: Item -> IO ()
 		drawItem (Item name (x,y) _) = do
 			move (y+1) x
