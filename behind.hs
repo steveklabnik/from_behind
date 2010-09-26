@@ -4,12 +4,14 @@ import Control.Monad.State
 import List
 
 type Health = Int
-type Name = String
 type Pos = (Int, Int)
 
 data Player = Player { playerName::String, 
 											 playerHP::Int,
-											 playerPos::Pos }
+											 playerPos::Pos,
+											 playerStr::Int,
+											 playerWeapon::Item
+										 }
 
 data Cell = Wall
           | Empty
@@ -23,12 +25,22 @@ data Item = Item { itemName::String,
 instance Eq Item where 
 	(==) a b = (itemName a == itemName b) && (itemPos a == itemPos b)
 
+instance Show Item where
+	show (Item name pos func) = name
+
 potion :: Pos -> Int -> Item
 potion pos hp = Item { itemName = "Potion",
 											 itemPos = pos,
 											 itemFunc = f}
 											where
 												f p = p { playerHP = ((playerHP p) + hp) }
+
+weapon :: String -> Pos -> Int -> Item
+weapon name pos dmg = Item { itemName = name,
+												itemPos = pos,
+												itemFunc = f }
+											where
+												f p = p { playerWeapon = weapon name pos dmg }
 
 instance Show Cell where 
 	show Wall = "#"
@@ -63,7 +75,7 @@ initWorld gen = do
 					otherwise -> Empty
 					where x = mod n 4
 			initPlayer :: Player
-			initPlayer = Player "Someone" 10 (0,0)
+			initPlayer = Player "Someone" 10 (0,0) 1 $ weapon "Fist" (0,0) 1  
 			addGoal :: Int -> Int -> [[Cell]] -> [[Cell]]
 			addGoal x y (b:board)  
 				| y == 1 = (addGoal' x b) : board
@@ -117,10 +129,10 @@ act (World board items p) i
 		| otherwise = False 
 
 drawWorld :: World -> IO ()
-drawWorld (World board items (Player name hp (x,y))) = do
+drawWorld (World board items (Player name hp (x,y) _ w)) = do
 	wclear stdScr
 	move 0 0
-	wAddStr stdScr $ name ++ " HP: " ++ (show hp)
+	wAddStr stdScr $ name ++ " HP: " ++ (show hp) ++ " Weapon: " ++ (show w)
 	move 1 0
 	board' <- return $ foldr (++) "" $ foldr (\a b -> (map show a) ++ ["\n"] ++ b) [] board
 	wAddStr stdScr board'
@@ -150,7 +162,7 @@ gameLoop n w
 		gameLoop (n + 1) w' 
 		where
 			hasWon :: World -> Bool
-			hasWon (World board _ (Player _ _ (x,y))) = board !! y !! x == Goal
+			hasWon (World board _ (Player _ _ (x,y) _ _)) = board !! y !! x == Goal
 
 main = do
 	--tons of curses stuff
