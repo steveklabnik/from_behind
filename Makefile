@@ -1,2 +1,9 @@
-main:
-	ghc -o behind -package hscurses behind.hs
+EXECUTABLE=behind
+
+all: behind.hs
+	ghc -o $(EXECUTABLE) -package hscurses -hide-package monads-tf behind.hs
+
+clean:
+	rm $(EXECUTABLE)
+	rm *.o
+	rm *.hi
